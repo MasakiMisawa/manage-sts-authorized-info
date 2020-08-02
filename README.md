@@ -1,7 +1,11 @@
 # manage-sts-authorized-info
 
-1. [What is?](#what-is?)
+todo 後で書く
 
-## What is?
+## Installation
+
+todo 後で書く
+
+## Usage
 
 todo 後で書く
