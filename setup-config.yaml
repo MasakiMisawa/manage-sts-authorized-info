@@ -1,0 +1,3 @@
+setup:
+  change_log:
+    file_path: ~/.aws/sts_authorized_info.log
