@@ -1,3 +1,11 @@
 setup:
+  register_profile:
+    profile_name:
+      default: "sts-session"
+    region:
+      default: "ap-northeast-1"
+    output:
+      default: "json"
+
   change_log:
-    file_path: ~/.aws/sts_authorized_info.log
+    file_path: ~/.aws/sts_assumed_role.log
