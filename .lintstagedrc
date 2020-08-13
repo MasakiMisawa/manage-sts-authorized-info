@@ -1,0 +1,13 @@
+{
+  "*": [
+    "git secrets --scan"
+  ],
+  "*.py": [
+    "black",
+    "git add"
+  ],
+  "*.{yml,yaml,json,md}": [
+    "prettier --write",
+    "git add"
+  ]
+}
