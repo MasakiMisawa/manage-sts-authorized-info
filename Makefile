@@ -1,3 +1,3 @@
 .PHONY: setup
 setup:
-	./setup.sh
+	python ./setup.py
