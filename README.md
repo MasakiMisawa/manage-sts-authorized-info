@@ -9,3 +9,11 @@ todo 後で書く
 ## Usage
 
 todo 後で書く
+
+## For Develop
+
+### Test
+
+```
+$ python -B -m unittest discover
+```
