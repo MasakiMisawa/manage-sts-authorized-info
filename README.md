@@ -13,7 +13,8 @@ $ python setup.py
 
 ### Install config.
 
-See [seup-config.yml](/config/setup-config.yml) details.  
+See [seup-config.yml](/config/setup-config.yml) details.
+
 you can customize these settings.  
 todo 設定可能項目の記載
 
@@ -29,7 +30,7 @@ See [Contributing](/.github/CONTRIBUTING.md) details.
 
 ### Create Local Setting
 
-- Formatter
+- **Formatter**
 
 1. Install yarn and black.
 
@@ -43,7 +44,7 @@ $ brew install yarn black
 $ yarn install
 ```
 
-- Security
+- **Security**
 
 1. install git-secrets.
 
@@ -57,7 +58,8 @@ brew install git-secrets
 git secrets --register-aws
 ```
 
-**Please don't use 'git secrets --install' command. .git/hooks/pre-commit is already used by husky**
+**Please don't use 'git secrets --install' command.**  
+**.git/hooks/pre-commit is already used by husky.**
 
 ### Test
 
