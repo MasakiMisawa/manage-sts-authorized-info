@@ -22,8 +22,8 @@ labels: task
 
 -
 
-## Category (Rrquired)
+## Category (Required)
 
-<!-- Write the task type. -->
+<!-- Write the task type. -->
 
 -
