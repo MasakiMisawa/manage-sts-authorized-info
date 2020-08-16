@@ -5,7 +5,7 @@ Before making Pull Request, please read this guideline.
 
 ## Create new issue
 
-At first [create new issue](/issues/new).
+At first [create new issue](/issues/new/choose).
 
 ## Fork this repository
 
