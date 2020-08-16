@@ -5,7 +5,7 @@ Before making Pull Request, please read this guideline.
 
 ## Create new issue
 
-At first [create new issue](/issues/new/choose).
+At first [create new issue](https://github.com/MasakiMisawa/manage-sts-authorized-info/issues/new/choose).
 
 ## Fork this repository
 
