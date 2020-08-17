@@ -1,6 +1,19 @@
 # manage-sts-authorized-info
 
-todo 後で書く
+1. [What is?](#what-is?)
+1. [Installation](#installation)
+1. [Usage](#usage)
+1. [Support](#support)
+1. [Contributing](#contributing)
+1. [For Develop](#for-develop)
+
+## What is?
+
+This tool makes it easier to manage the AWS Security Token Service when using the AWS CLI.  
+It provides two merit.
+
+1. Saves you from having to add the provided iam role arn information to the config file for the AWS CLI.
+1. You can see in the history what provided iam role arn's were added or removed from the config file for the AWS CLI.
 
 ## Installation
 
@@ -22,9 +35,21 @@ todo 設定可能項目の記載
 
 todo 後で書く
 
+## Support
+
+### OS
+
+Supports macOS and Linux(CentOS / Ubuntu).  
+`WindowsOS not supported sorry!`
+
+### SHELL
+
+Supports bash and zsh.  
+
+
 ## Contributing
 
-See [Contributing](/.github/CONTRIBUTING.md) details.
+See [CONTRIBUTING.md](/.github/CONTRIBUTING.md) details.
 
 ## For Develop
 

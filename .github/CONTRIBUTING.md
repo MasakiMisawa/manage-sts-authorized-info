@@ -13,7 +13,7 @@ Press the fork button at the top right of this page.
 
 ## Create local setting
 
-Create your local environment setting to whatis written [here](/README.md#create-local-setting).
+Follow the instructions in [README.md](/README.md#create-local-setting) to set up your local environment.
 
 ## Create a branch and write code
 
