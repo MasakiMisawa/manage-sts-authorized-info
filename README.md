@@ -12,8 +12,8 @@
 This tool makes it easier to manage the AWS Security Token Service when using the AWS CLI.  
 It provides two merit.
 
-1. Saves you from having to add the provided iam role arn information to the config file for the AWS CLI.
-1. You can see in the history what provided iam role arn's were added or removed from the config file for the AWS CLI.
+1. Saves you from having to add the assumed role information to the config file for the AWS CLI.
+1. You can see in the history what assumed role's were added or removed from the config file for the AWS CLI.
 
 ## Installation
 
@@ -44,8 +44,7 @@ Supports macOS and Linux(CentOS / Ubuntu).
 
 ### SHELL
 
-Supports bash and zsh.  
-
+Supports bash and zsh.
 
 ## Contributing
 
