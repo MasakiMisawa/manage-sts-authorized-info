@@ -32,6 +32,12 @@ AWS_ALL_REGIONS = [
 CLI_ALL_OUTPUT_FORMATS = ["json", "yaml", "text", "table"]
 BASH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.bashrc"
 ZSH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.zshrc"
+REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH = "template/register_sts_assumed_role.tmpl"
+REPLACEMENT_STRING_CONFIG_FILE_PATH = "$REPLACEMENT_STRING_CONFIG_FILE_PATH"
+REPLACEMENT_STRING_REGISTER_PROFILE = "$REPLACEMENT_STRING_REGISTER_PROFILE"
+REPLACEMENT_STRING_REGION_NAME = "$REPLACEMENT_STRING_REGION_NAME"
+REPLACEMENT_STRING_OUTPUT_FORMAT = "$REPLACEMENT_STRING_OUTPUT_FORMAT"
+REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH = "$REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH"
 
 
 class TestSetup(unittest.TestCase):
@@ -115,6 +121,139 @@ class TestSetup(unittest.TestCase):
             self.assertEqual(
                 login_shell_setting_file_path, login_shell["expected_value"]
             )
+
+    def test_generate_register_sts_assumed_role_template_expected_value(self):
+        ## given
+        with open(REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH) as template_file:
+            expected_value = (
+                template_file.read()
+                .replace(REPLACEMENT_STRING_CONFIG_FILE_PATH, "$HOME/.aws/config")
+                .replace(REPLACEMENT_STRING_REGISTER_PROFILE, "sts-session")
+                .replace(REPLACEMENT_STRING_REGION_NAME, "ap-northeast-1")
+                .replace(REPLACEMENT_STRING_OUTPUT_FORMAT, "json")
+                .replace(
+                    REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH,
+                    "$HOME/.aws/sts_assumed_role.log",
+                )
+            )
+
+        ## when
+        str_register_sts_assumed_role = setup.generate_register_sts_assumed_role_template(
+            setup.REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH,
+            setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH),
+        )
+
+        ## then
+        self.assertEqual(str_register_sts_assumed_role, expected_value)
+
+    def test_replace_replacement_string(self):
+        ## given
+        exist_config_file_path_replacement_string_before_replace = False
+        exist_profile_name_replacement_string_before_replace = False
+        exist_region_replacement_string_before_replace = False
+        exist_output_replacement_string_before_replace = False
+        exist_change_log_file_path_replacement_string_before_replace = False
+        not_exist_config_file_path_before_replace = False
+        not_exist_profile_name_before_replace = False
+        not_exist_region_before_replace = False
+        not_exist_output_before_replace = False
+        not_exist_change_log_file_path_before_replace = False
+
+        config = setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH)
+        config_file_path = config.config_file_path
+        profile_name = config.profile_name
+        region = config.region
+        output = config.output
+        change_log_file_path = config.change_log_file_path
+        with open(setup.REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, "r") as f:
+            before_template = f.read()
+            if REPLACEMENT_STRING_CONFIG_FILE_PATH in before_template:
+                exist_config_file_path_replacement_string_before_replace = True
+            if REPLACEMENT_STRING_REGISTER_PROFILE in before_template:
+                exist_profile_name_replacement_string_before_replace = True
+            if REPLACEMENT_STRING_REGION_NAME in before_template:
+                exist_region_replacement_string_before_replace = True
+            if REPLACEMENT_STRING_OUTPUT_FORMAT in before_template:
+                exist_output_replacement_string_before_replace = True
+            if REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH in before_template:
+                exist_change_log_file_path_replacement_string_before_replace = True
+            if config_file_path not in before_template:
+                not_exist_config_file_path_before_replace = True
+            if profile_name not in before_template:
+                not_exist_profile_name_before_replace = True
+            if region not in before_template:
+                not_exist_region_before_replace = True
+            if output not in before_template:
+                not_exist_output_before_replace = True
+            if change_log_file_path not in before_template:
+                not_exist_change_log_file_path_before_replace = True
+
+        ## when
+        str_register_sts_assumed_role = setup.replace_replacement_string(
+            before_template,
+            config_file_path,
+            profile_name,
+            region,
+            output,
+            change_log_file_path,
+        )
+
+        ## then
+        self.assertIn(config_file_path, str_register_sts_assumed_role)
+        self.assertNotIn(
+            REPLACEMENT_STRING_CONFIG_FILE_PATH, str_register_sts_assumed_role
+        )
+        self.assertIn(profile_name, str_register_sts_assumed_role)
+        self.assertNotIn(
+            REPLACEMENT_STRING_REGISTER_PROFILE, str_register_sts_assumed_role
+        )
+        self.assertIn(region, str_register_sts_assumed_role)
+        self.assertNotIn(REPLACEMENT_STRING_REGION_NAME, str_register_sts_assumed_role)
+        self.assertIn(output, str_register_sts_assumed_role)
+        self.assertNotIn(
+            REPLACEMENT_STRING_OUTPUT_FORMAT, str_register_sts_assumed_role
+        )
+        self.assertIn(change_log_file_path, str_register_sts_assumed_role)
+        self.assertNotIn(
+            REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH, str_register_sts_assumed_role
+        )
+        self.assertTrue(exist_config_file_path_replacement_string_before_replace)
+        self.assertTrue(exist_profile_name_replacement_string_before_replace)
+        self.assertTrue(exist_region_replacement_string_before_replace)
+        self.assertTrue(exist_output_replacement_string_before_replace)
+        self.assertTrue(exist_change_log_file_path_replacement_string_before_replace)
+        self.assertTrue(not_exist_config_file_path_before_replace)
+        self.assertTrue(not_exist_profile_name_before_replace)
+        self.assertTrue(not_exist_region_before_replace)
+        self.assertTrue(not_exist_output_before_replace)
+        self.assertTrue(not_exist_change_log_file_path_before_replace)
+
+    def test_backup_file_success(self):
+        ## given
+        file_path = "test_backup_file_success.txt"
+        test_string = "test"
+        with open(file_path, "w") as test_file:
+            test_file.write(test_string)
+
+        ## when
+        backup_file_path = setup.backup_file(file_path, logger)
+
+        ## then
+        self.assertTrue(os.path.exists(backup_file_path))
+        with open(backup_file_path) as backup_file:
+            self.assertEqual(backup_file.read(), test_string)
+        os.remove(file_path)
+        os.remove(backup_file_path)
+
+    def test_backup_file_file_not_exist(self):
+        ## given
+        file_path = "test_backup_file_file_not_exist.txt"
+
+        ## when
+        backup_file_path = setup.backup_file(file_path, logger)
+
+        ## then
+        self.assertIsNone(backup_file_path)
 
     @classmethod
     def tearDownClass(cls):

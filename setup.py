@@ -2,6 +2,7 @@ import yaml
 import logging
 import os
 import datetime
+import shutil
 
 ## const value
 SETUP_CONFIG_FILE_PATH = "config/setup-config.yaml"
@@ -168,10 +169,10 @@ def generate_register_sts_assumed_role_template(template_file_path, setup_config
 
     Returns
     -------
-    str_register_sts_assumed_role : str
+    function_string : str
         register-sts-assumed-role function string.
     """
-    with open(template_file_path) as f:
+    with open(template_file_path, "r") as f:
         return replace_replacement_string(
             f.read(),
             setup_config.config_file_path,
@@ -182,16 +183,72 @@ def generate_register_sts_assumed_role_template(template_file_path, setup_config
         )
 
 
+def backup_file(file_path, logger):
+    """
+    Backup login shell setting file before change.
+
+    Parameters
+    ----------
+    file_path : str
+        backup target file path.
+    logger : logger
+        logging.logger object.
+
+    Returns
+    -------
+    backup_file_path : str
+        backup result file path.
+    """
+    if os.path.exists(file_path) == False:
+        logger.warn(
+            datetime.datetime.now().isoformat()
+            + " backup target file not exist. file_path: "
+            + file_path
+        )
+        return None
+    backup_file_path = (
+        file_path + "_bk_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    )
+    shutil.copy(file_path, backup_file_path)
+    logger.info(
+        datetime.datetime.now().isoformat()
+        + " backup file success. file_path: "
+        + file_path
+        + ", backup_file_path: "
+        + backup_file_path
+    )
+    return backup_file_path
+
+
 def reload_login_shell_setting_file(login_shell_setting_file_path):
     """
     Run the source of linux commands in the login shell setting file.
 
     Parameters
     ----------
-    login_shell_setting_file_path : ztr
+    login_shell_setting_file_path : str
         login shell setting file path.
     """
     pass
+
+
+def enabling_register_sts_assumed_role(
+    function_string, login_shell_setting_file_path, logger
+):
+    """
+    Register register_sts_assumed_role function to login shell setting file.
+
+    Parameters
+    ----------
+    function_string : str
+        register-sts-assumed-role function string.
+    login_shell_setting_file_path : str
+        login shell setting file path.
+    logger : logger
+        logging.logger object.
+    """
+    backup_file(login_shell_setting_file_path, logger)
+    reload_login_shell_setting_file(login_shell_setting_file_path)
 
 
 def setup_register_sts_assumed_role(setup_config, logger):
@@ -216,12 +273,19 @@ def setup_register_sts_assumed_role(setup_config, logger):
         print("Sorry. the only supported login shells are bash and zsh.")
         return
 
-    str_register_sts_assumed_role = generate_register_sts_assumed_role_template(
-        REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, setup_config
+    enabling_register_sts_assumed_role(
+        generate_register_sts_assumed_role_template(
+            REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, setup_config
+        ),
+        login_shell_setting_file_path,
+        logger,
     )
-    # print(str_register_sts_assumed_role)
-    reload_login_shell_setting_file(login_shell_setting_file_path)
-    print("setup finished.")
+
+    logger.info(
+        datetime.datetime.now().isoformat()
+        + "execute setup_register_sts_assumed_role successed."
+    )
+    print("setup successed.")
 
 
 if __name__ == "__main__":
