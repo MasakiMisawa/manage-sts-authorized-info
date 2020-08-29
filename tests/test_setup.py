@@ -523,7 +523,7 @@ class TestSetup(unittest.TestCase):
             )
 
         sys.stdout = tmp_stdout
-        if before_shell_environ is not None:
+        if "before_shell_environ" in locals():
             os.environ["SHELL"] = before_shell_environ
         os.remove(login_shell_setting_file_path)
         os.remove(backup_file_path)
@@ -547,7 +547,7 @@ class TestSetup(unittest.TestCase):
         )
 
         sys.stdout = tmp_stdout
-        if before_shell_environ is not None:
+        if "before_shell_environ" in locals():
             os.environ["SHELL"] = before_shell_environ
 
     def test_setup_register_sts_assumed_role_login_shell_not_supported(self):
@@ -571,7 +571,7 @@ class TestSetup(unittest.TestCase):
         )
 
         sys.stdout = tmp_stdout
-        if before_shell_environ is not None:
+        if "before_shell_environ" in locals():
             os.environ["SHELL"] = before_shell_environ
 
     ####################################
