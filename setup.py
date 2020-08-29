@@ -112,6 +112,8 @@ def get_login_shell_setting_file_path(login_shell_path):
         return BASH_LOGIN_SHELL_SETTING_FILE_PATH.replace("$HOME", os.environ["HOME"])
     elif login_shell_path.endswith("zsh"):
         return ZSH_LOGIN_SHELL_SETTING_FILE_PATH.replace("$HOME", os.environ["HOME"])
+    elif login_shell_path == "test":
+        return "test_login_shell_setting_file_path.rc"
     else:
         return None
 
@@ -271,15 +273,15 @@ def register_function(function_string, login_shell_setting_file_path, logger):
     ):
         with open(login_shell_setting_file_path, "r") as login_shell_setting_file:
             login_shell_setting = login_shell_setting_file.read()
-            register_sts_assumed_role = login_shell_setting[
+            before_function = login_shell_setting[
                 login_shell_setting.find(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL) :
             ]
-            register_sts_assumed_role = register_sts_assumed_role[
-                : register_sts_assumed_role.find(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
+            before_function = before_function[
+                : before_function.find(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
                 + len(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
             ]
             login_shell_setting = login_shell_setting.replace(
-                register_sts_assumed_role, function_string
+                before_function, function_string
             )
 
         with open(login_shell_setting_file_path, mode="w") as login_shell_setting_file:
@@ -335,6 +337,10 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
     logger : logger
         logging.logger object.
     """
+    if "SHELL" not in os.environ:
+        print("Login shells not found.")
+        return
+
     login_shell_path = os.environ["SHELL"]
     login_shell_setting_file_path = get_login_shell_setting_file_path(login_shell_path)
     if login_shell_setting_file_path is None:
@@ -359,7 +365,11 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
         datetime.datetime.now().isoformat()
         + "execute setup_register_sts_assumed_role successed."
     )
-    print("setup successed.")
+    print(
+        "Setup successed. please run `source "
+        + login_shell_setting_file_path
+        + "` command."
+    )
 
 
 if __name__ == "__main__":
