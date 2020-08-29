@@ -485,7 +485,12 @@ class TestSetup(unittest.TestCase):
         )
 
         ## then
-        self.assertEqual(sys.stdout.getvalue(), "setup successed.\n")
+        self.assertEqual(
+            sys.stdout.getvalue(),
+            "Setup successed. please run `source "
+            + login_shell_setting_file_path
+            + "` command.\n",
+        )
         backup_file_path = (
             login_shell_setting_file_path + "_bk_" + now.strftime("%Y%m%d%H%M%S")
         )

@@ -365,7 +365,11 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
         datetime.datetime.now().isoformat()
         + "execute setup_register_sts_assumed_role successed."
     )
-    print("setup successed.")
+    print(
+        "Setup successed. please run `source "
+        + login_shell_setting_file_path
+        + "` command."
+    )
 
 
 if __name__ == "__main__":
