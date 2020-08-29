@@ -112,6 +112,8 @@ def get_login_shell_setting_file_path(login_shell_path):
         return BASH_LOGIN_SHELL_SETTING_FILE_PATH.replace("$HOME", os.environ["HOME"])
     elif login_shell_path.endswith("zsh"):
         return ZSH_LOGIN_SHELL_SETTING_FILE_PATH.replace("$HOME", os.environ["HOME"])
+    elif login_shell_path == "test":
+        return "test_login_shell_setting_file_path.rc"
     else:
         return None
 
@@ -271,15 +273,15 @@ def register_function(function_string, login_shell_setting_file_path, logger):
     ):
         with open(login_shell_setting_file_path, "r") as login_shell_setting_file:
             login_shell_setting = login_shell_setting_file.read()
-            register_sts_assumed_role = login_shell_setting[
+            before_function = login_shell_setting[
                 login_shell_setting.find(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL) :
             ]
-            register_sts_assumed_role = register_sts_assumed_role[
-                : register_sts_assumed_role.find(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
+            before_function = before_function[
+                : before_function.find(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
                 + len(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
             ]
             login_shell_setting = login_shell_setting.replace(
-                register_sts_assumed_role, function_string
+                before_function, function_string
             )
 
         with open(login_shell_setting_file_path, mode="w") as login_shell_setting_file:

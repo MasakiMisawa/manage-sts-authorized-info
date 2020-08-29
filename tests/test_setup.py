@@ -4,6 +4,8 @@ import logging
 import os
 import yaml
 import datetime
+from io import StringIO
+import sys
 
 TEST_RESULT_LOG_FILE_PATH = "tests/logs/test_result.log"
 SETUP_CONFIG_FILE_PATH = "config/setup-config.yaml"
@@ -113,6 +115,10 @@ class TestSetup(unittest.TestCase):
                 "expected_value": ZSH_LOGIN_SHELL_SETTING_FILE_PATH.replace(
                     "$HOME", os.environ["HOME"]
                 ),
+            },
+            {
+                "login_shell_path": "test",
+                "expected_value": "test_login_shell_setting_file_path.rc",
             },
             {"login_shell_path": "/bin/tcsh", "expected_value": None},
             {"login_shell_path": None, "expected_value": None},
@@ -451,6 +457,91 @@ class TestSetup(unittest.TestCase):
 
             os.remove(login_shell_setting_file_path)
             os.remove(backup_file_path)
+
+    def test_setup_register_sts_assumed_role_success(self):
+        ## given
+        now = datetime.datetime.now()
+        before_shell_environ = os.environ["SHELL"]
+        os.environ["SHELL"] = "test"
+        test_replaced_string = "test_replaced_string"
+        before_text = "before"
+        after_text = "after"
+        login_shell_setting_file_path = "test_login_shell_setting_file_path.rc"
+        with open(login_shell_setting_file_path, "w") as test_login_shell_setting_file:
+            test_login_shell_setting_file.writelines(before_text + "\n")
+            test_login_shell_setting_file.writelines(
+                REGISTER_STS_ASSUMED_ROLE_START_SIGNAL + "\n"
+            )
+            test_login_shell_setting_file.writelines(test_replaced_string + "\n")
+            test_login_shell_setting_file.writelines(
+                REGISTER_STS_ASSUMED_ROLE_END_SIGNAL + "\n"
+            )
+            test_login_shell_setting_file.writelines(after_text)
+        tmp_stdout, sys.stdout = sys.stdout, StringIO()
+
+        ## when
+        setup.setup_register_sts_assumed_role(
+            setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH), now, logger
+        )
+
+        ## then
+        self.assertEqual(sys.stdout.getvalue(), "setup successed.\n")
+        backup_file_path = (
+            login_shell_setting_file_path + "_bk_" + now.strftime("%Y%m%d%H%M%S")
+        )
+        self.assertTrue(os.path.exists(backup_file_path))
+        with open(backup_file_path, "r") as backup_file:
+            self.assertEqual(
+                backup_file.read(),
+                before_text
+                + "\n"
+                + REGISTER_STS_ASSUMED_ROLE_START_SIGNAL
+                + "\n"
+                + test_replaced_string
+                + "\n"
+                + REGISTER_STS_ASSUMED_ROLE_END_SIGNAL
+                + "\n"
+                + after_text,
+            )
+
+        function_string = setup.generate_register_sts_assumed_role_template(
+            REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH,
+            setup.load_setup_config(SETUP_CONFIG_FILE_PATH),
+        )
+        with open(login_shell_setting_file_path, "r") as result_file:
+            login_shell_setting = result_file.read()
+            self.assertNotIn(login_shell_setting, test_replaced_string)
+            self.assertEqual(
+                login_shell_setting,
+                before_text + "\n" + function_string + "\n" + after_text,
+            )
+
+        sys.stdout = tmp_stdout
+        os.environ["SHELL"] = before_shell_environ
+        os.remove(login_shell_setting_file_path)
+        os.remove(backup_file_path)
+
+    def test_setup_register_sts_assumed_role_login_shell_not_supported(self):
+        ## given
+        ## given
+        now = datetime.datetime.now()
+        before_shell_environ = os.environ["SHELL"]
+        os.environ["SHELL"] = "not_supported"
+        tmp_stdout, sys.stdout = sys.stdout, StringIO()
+
+        ## when
+        setup.setup_register_sts_assumed_role(
+            setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH), now, logger
+        )
+
+        ## then
+        self.assertEqual(
+            sys.stdout.getvalue(),
+            "Sorry. the only supported login shells are bash and zsh.\n",
+        )
+
+        sys.stdout = tmp_stdout
+        os.environ["SHELL"] = before_shell_environ
 
     ####################################
     ########## Private Method ##########
