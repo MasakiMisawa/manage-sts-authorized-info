@@ -461,7 +461,8 @@ class TestSetup(unittest.TestCase):
     def test_setup_register_sts_assumed_role_success(self):
         ## given
         now = datetime.datetime.now()
-        before_shell_environ = os.environ["SHELL"]
+        if "SHELL" in os.environ:
+            before_shell_environ = os.environ["SHELL"]
         os.environ["SHELL"] = "test"
         test_replaced_string = "test_replaced_string"
         before_text = "before"
@@ -522,16 +523,17 @@ class TestSetup(unittest.TestCase):
             )
 
         sys.stdout = tmp_stdout
-        os.environ["SHELL"] = before_shell_environ
+        if before_shell_environ is not None:
+            os.environ["SHELL"] = before_shell_environ
         os.remove(login_shell_setting_file_path)
         os.remove(backup_file_path)
 
     def test_setup_register_sts_assumed_role_login_shell_not_found(self):
         ## given
-        ## given
         now = datetime.datetime.now()
-        before_shell_environ = os.environ["SHELL"]
-        del os.environ["SHELL"]
+        if "SHELL" in os.environ:
+            before_shell_environ = os.environ["SHELL"]
+            del os.environ["SHELL"]
         tmp_stdout, sys.stdout = sys.stdout, StringIO()
 
         ## when
@@ -545,13 +547,15 @@ class TestSetup(unittest.TestCase):
         )
 
         sys.stdout = tmp_stdout
-        os.environ["SHELL"] = before_shell_environ
+        if before_shell_environ is not None:
+            os.environ["SHELL"] = before_shell_environ
 
     def test_setup_register_sts_assumed_role_login_shell_not_supported(self):
         ## given
         ## given
         now = datetime.datetime.now()
-        before_shell_environ = os.environ["SHELL"]
+        if "SHELL" in os.environ:
+            before_shell_environ = os.environ["SHELL"]
         os.environ["SHELL"] = "not_supported"
         tmp_stdout, sys.stdout = sys.stdout, StringIO()
 
@@ -567,7 +571,8 @@ class TestSetup(unittest.TestCase):
         )
 
         sys.stdout = tmp_stdout
-        os.environ["SHELL"] = before_shell_environ
+        if before_shell_environ is not None:
+            os.environ["SHELL"] = before_shell_environ
 
     ####################################
     ########## Private Method ##########
