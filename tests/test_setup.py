@@ -521,6 +521,27 @@ class TestSetup(unittest.TestCase):
         os.remove(login_shell_setting_file_path)
         os.remove(backup_file_path)
 
+    def test_setup_register_sts_assumed_role_login_shell_not_found(self):
+        ## given
+        ## given
+        now = datetime.datetime.now()
+        before_shell_environ = os.environ["SHELL"]
+        del os.environ["SHELL"]
+        tmp_stdout, sys.stdout = sys.stdout, StringIO()
+
+        ## when
+        setup.setup_register_sts_assumed_role(
+            setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH), now, logger
+        )
+
+        ## then
+        self.assertEqual(
+            sys.stdout.getvalue(), "Login shells not found.\n",
+        )
+
+        sys.stdout = tmp_stdout
+        os.environ["SHELL"] = before_shell_environ
+
     def test_setup_register_sts_assumed_role_login_shell_not_supported(self):
         ## given
         ## given

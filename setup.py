@@ -337,6 +337,10 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
     logger : logger
         logging.logger object.
     """
+    if "SHELL" not in os.environ:
+        print("Login shells not found.")
+        return
+
     login_shell_path = os.environ["SHELL"]
     login_shell_setting_file_path = get_login_shell_setting_file_path(login_shell_path)
     if login_shell_setting_file_path is None:
