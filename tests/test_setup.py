@@ -3,6 +3,7 @@ import setup
 import logging
 import os
 import yaml
+import datetime
 
 TEST_RESULT_LOG_FILE_PATH = "tests/logs/test_result.log"
 SETUP_CONFIG_FILE_PATH = "config/setup-config.yaml"
@@ -38,6 +39,12 @@ REPLACEMENT_STRING_REGISTER_PROFILE = "$REPLACEMENT_STRING_REGISTER_PROFILE"
 REPLACEMENT_STRING_REGION_NAME = "$REPLACEMENT_STRING_REGION_NAME"
 REPLACEMENT_STRING_OUTPUT_FORMAT = "$REPLACEMENT_STRING_OUTPUT_FORMAT"
 REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH = "$REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH"
+REGISTER_STS_ASSUMED_ROLE_START_SIGNAL = (
+    "###### register_sts_assumed_role starts here ######"
+)
+REGISTER_STS_ASSUMED_ROLE_END_SIGNAL = (
+    "###### register_sts_assumed_role ends here ######"
+)
 
 
 class TestSetup(unittest.TestCase):
@@ -124,7 +131,7 @@ class TestSetup(unittest.TestCase):
 
     def test_generate_register_sts_assumed_role_template_expected_value(self):
         ## given
-        with open(REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH) as template_file:
+        with open(REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, "r") as template_file:
             expected_value = (
                 template_file.read()
                 .replace(REPLACEMENT_STRING_CONFIG_FILE_PATH, "$HOME/.aws/config")
@@ -235,12 +242,17 @@ class TestSetup(unittest.TestCase):
         with open(file_path, "w") as test_file:
             test_file.write(test_string)
 
+        now = datetime.datetime.now()
+
         ## when
-        backup_file_path = setup.backup_file(file_path, logger)
+        backup_file_path = setup.backup_file(file_path, now, logger)
 
         ## then
         self.assertTrue(os.path.exists(backup_file_path))
-        with open(backup_file_path) as backup_file:
+        self.assertEqual(
+            backup_file_path, file_path + "_bk_" + now.strftime("%Y%m%d%H%M%S")
+        )
+        with open(backup_file_path, "r") as backup_file:
             self.assertEqual(backup_file.read(), test_string)
         os.remove(file_path)
         os.remove(backup_file_path)
@@ -250,10 +262,204 @@ class TestSetup(unittest.TestCase):
         file_path = "test_backup_file_file_not_exist.txt"
 
         ## when
-        backup_file_path = setup.backup_file(file_path, logger)
+        backup_file_path = setup.backup_file(file_path, datetime.datetime.now(), logger)
 
         ## then
         self.assertIsNone(backup_file_path)
+
+    def test_exist_register_sts_assumed_role_file_not_exist(self):
+        ## given
+        file_path = "test_exist_register_sts_assumed_role_file_not_exist.txt"
+
+        ## when
+        exist_register_sts_assumed_role = setup.exist_register_sts_assumed_role(
+            file_path,
+            setup.REGISTER_STS_ASSUMED_ROLE_START_SIGNAL,
+            setup.REGISTER_STS_ASSUMED_ROLE_END_SIGNAL,
+        )
+
+        ## then
+        self.assertFalse(exist_register_sts_assumed_role)
+
+    def test_exist_register_sts_assumed_role_expected_value(self):
+        ## given
+        exist_signal_file_path = "exist_register_sts_assumed_role.rc"
+        test_string = "test"
+        with open(exist_signal_file_path, "w") as exist_signal_file:
+            exist_signal_file.writelines(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL + "\n")
+            exist_signal_file.writelines(test_string + "\n")
+            exist_signal_file.writelines(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
+
+        not_exist_signal_file_path = "not_exist_register_sts_assumed_role.rc"
+        with open(not_exist_signal_file_path, "w") as not_exist_signal_file:
+            not_exist_signal_file.write(test_string)
+
+        exist_signal_but_wrong_order_file_path = (
+            "wrong_order_register_sts_assumed_role.rc"
+        )
+        with open(exist_signal_but_wrong_order_file_path, "w") as wrong_order_file:
+            wrong_order_file.writelines(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL + "\n")
+            wrong_order_file.writelines(test_string + "\n")
+            wrong_order_file.writelines(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL)
+
+        login_shell_setting_file_paths = [
+            {"file_path": exist_signal_file_path, "expected_value": True,},
+            {"file_path": not_exist_signal_file_path, "expected_value": False,},
+            {
+                "file_path": exist_signal_but_wrong_order_file_path,
+                "expected_value": False,
+            },
+        ]
+
+        for login_shell_setting_file in login_shell_setting_file_paths:
+            ## when
+            exist_register_sts_assumed_role = setup.exist_register_sts_assumed_role(
+                login_shell_setting_file["file_path"],
+                setup.REGISTER_STS_ASSUMED_ROLE_START_SIGNAL,
+                setup.REGISTER_STS_ASSUMED_ROLE_END_SIGNAL,
+            )
+
+            ## then
+            self.assertEqual(
+                exist_register_sts_assumed_role,
+                login_shell_setting_file["expected_value"],
+            )
+
+        os.remove(exist_signal_file_path)
+        os.remove(not_exist_signal_file_path)
+        os.remove(exist_signal_but_wrong_order_file_path)
+
+    def test_register_function_insert_success(self):
+        ## given
+        function_string = self.__generate_function_string()
+        insert_file_path = "test_register_function_insert_success.rc"
+        test_string = "test"
+        with open(insert_file_path, "w") as insert_file:
+            insert_file.write(test_string)
+
+        ## when
+        setup.register_function(function_string, insert_file_path, logger)
+
+        ## then
+        with open(insert_file_path, "r") as result_file:
+            self.assertEqual(result_file.read(), test_string + "\n" + function_string)
+
+        os.remove(insert_file_path)
+
+    def test_register_function_update_success(self):
+        ## given
+        function_string = self.__generate_function_string()
+        update_file_path = "test_register_function_update_success.rc"
+        test_replaced_string = "test_replaced_string"
+        before_text = "before"
+        after_text = "after"
+        with open(update_file_path, "w") as update_file:
+            update_file.writelines(before_text + "\n")
+            update_file.writelines(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL + "\n")
+            update_file.writelines(test_replaced_string + "\n")
+            update_file.writelines(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL + "\n")
+            update_file.writelines(after_text)
+
+        ## when
+        setup.register_function(function_string, update_file_path, logger)
+
+        ## then
+        with open(update_file_path, "r") as result_file:
+            login_shell_setting = result_file.read()
+            self.assertNotIn(login_shell_setting, test_replaced_string)
+            self.assertEqual(
+                login_shell_setting,
+                before_text + "\n" + function_string + "\n" + after_text,
+            )
+
+        os.remove(update_file_path)
+
+    def test_enabling_register_sts_assumed_role_success(self):
+        ## given
+        function_string = self.__generate_function_string()
+        test_string = "test"
+        now = datetime.datetime.now()
+
+        login_shell_setting_insert_file_path = (
+            "test_enabling_register_sts_assumed_role_success_insert.rc"
+        )
+        with open(
+            login_shell_setting_insert_file_path, "w"
+        ) as login_shell_setting_insert_file:
+            login_shell_setting_insert_file.write(test_string)
+
+        before_text = "before"
+        after_text = "after"
+        login_shell_setting_update_file_path = (
+            "test_enabling_register_sts_assumed_role_success_update.rc"
+        )
+        update_before_text = (
+            before_text
+            + "\n"
+            + REGISTER_STS_ASSUMED_ROLE_START_SIGNAL
+            + "\n"
+            + test_string
+            + "\n"
+            + REGISTER_STS_ASSUMED_ROLE_END_SIGNAL
+            + "\n"
+            + after_text
+        )
+        with open(
+            login_shell_setting_update_file_path, "w"
+        ) as login_shell_setting_update_file:
+            login_shell_setting_update_file.write(update_before_text)
+
+        login_shell_settings = [
+            {
+                "login_shell_settig_file_path": login_shell_setting_insert_file_path,
+                "before_expected_value": test_string,
+                "after_expected_value": test_string + "\n" + function_string,
+            },
+            {
+                "login_shell_settig_file_path": login_shell_setting_update_file_path,
+                "before_expected_value": update_before_text,
+                "after_expected_value": before_text
+                + "\n"
+                + function_string
+                + "\n"
+                + after_text,
+            },
+        ]
+
+        for login_shell_setting in login_shell_settings:
+            ## when
+            login_shell_setting_file_path = login_shell_setting[
+                "login_shell_settig_file_path"
+            ]
+            setup.enabling_register_sts_assumed_role(
+                function_string, login_shell_setting_file_path, now, logger
+            )
+
+            ## then
+            backup_file_path = (
+                login_shell_setting_file_path + "_bk_" + now.strftime("%Y%m%d%H%M%S")
+            )
+            self.assertTrue(os.path.exists(backup_file_path))
+            with open(backup_file_path, "r") as backup_file:
+                self.assertEqual(
+                    backup_file.read(), login_shell_setting["before_expected_value"]
+                )
+            with open(login_shell_setting_file_path, "r") as result_file:
+                self.assertEqual(
+                    result_file.read(), login_shell_setting["after_expected_value"]
+                )
+
+            os.remove(login_shell_setting_file_path)
+            os.remove(backup_file_path)
+
+    ####################################
+    ########## Private Method ##########
+    ####################################
+    def __generate_function_string(self):
+        return setup.generate_register_sts_assumed_role_template(
+            REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH,
+            setup.load_setup_config(SETUP_CONFIG_FILE_PATH),
+        )
 
     @classmethod
     def tearDownClass(cls):

@@ -172,9 +172,9 @@ def generate_register_sts_assumed_role_template(template_file_path, setup_config
     function_string : str
         register-sts-assumed-role function string.
     """
-    with open(template_file_path, "r") as f:
+    with open(template_file_path, "r") as template_file:
         return replace_replacement_string(
-            f.read(),
+            template_file.read(),
             setup_config.config_file_path,
             setup_config.profile_name,
             setup_config.region,
@@ -183,7 +183,7 @@ def generate_register_sts_assumed_role_template(template_file_path, setup_config
         )
 
 
-def backup_file(file_path, logger):
+def backup_file(file_path, now, logger):
     """
     Backup login shell setting file before change.
 
@@ -191,6 +191,8 @@ def backup_file(file_path, logger):
     ----------
     file_path : str
         backup target file path.
+    now : datetime.datetime
+        current datetime.
     logger : logger
         logging.logger object.
 
@@ -200,18 +202,14 @@ def backup_file(file_path, logger):
         backup result file path.
     """
     if os.path.exists(file_path) == False:
-        logger.warn(
-            datetime.datetime.now().isoformat()
-            + " backup target file not exist. file_path: "
-            + file_path
+        logger.warning(
+            now.isoformat() + " backup target file not exist. file_path: " + file_path
         )
         return None
-    backup_file_path = (
-        file_path + "_bk_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    )
+    backup_file_path = file_path + "_bk_" + now.strftime("%Y%m%d%H%M%S")
     shutil.copy(file_path, backup_file_path)
     logger.info(
-        datetime.datetime.now().isoformat()
+        now.isoformat()
         + " backup file success. file_path: "
         + file_path
         + ", backup_file_path: "
@@ -220,21 +218,40 @@ def backup_file(file_path, logger):
     return backup_file_path
 
 
-def reload_login_shell_setting_file(login_shell_setting_file_path):
+def exist_register_sts_assumed_role(
+    login_shell_setting_file_path, start_signal, end_signal
+):
     """
-    Run the source of linux commands in the login shell setting file.
+    Already exist register_sts_assumed_role function from login shell setting file.
 
     Parameters
     ----------
     login_shell_setting_file_path : str
         login shell setting file path.
+    start_signal : str
+        register_sts_assumed_role function start signal.
+    end_signal : str
+        register_sts_assumed_role function end signal.
+
+    Returns
+    -------
+    is_exist : bool
+        if exist True. not exist False.
     """
-    pass
+    if os.path.exists(login_shell_setting_file_path) == False:
+        return False
+
+    with open(login_shell_setting_file_path, "r") as login_shell_setting_file:
+        login_shell_setting = login_shell_setting_file.read()
+        start_index = login_shell_setting.find(start_signal)
+        if start_index < 0:
+            return False
+
+        register_sts_assumed_role = login_shell_setting[start_index:]
+        return register_sts_assumed_role.find(end_signal) >= len(start_signal)
 
 
-def enabling_register_sts_assumed_role(
-    function_string, login_shell_setting_file_path, logger
-):
+def register_function(function_string, login_shell_setting_file_path, logger):
     """
     Register register_sts_assumed_role function to login shell setting file.
 
@@ -247,11 +264,65 @@ def enabling_register_sts_assumed_role(
     logger : logger
         logging.logger object.
     """
-    backup_file(login_shell_setting_file_path, logger)
-    reload_login_shell_setting_file(login_shell_setting_file_path)
+    if exist_register_sts_assumed_role(
+        login_shell_setting_file_path,
+        REGISTER_STS_ASSUMED_ROLE_START_SIGNAL,
+        REGISTER_STS_ASSUMED_ROLE_END_SIGNAL,
+    ):
+        with open(login_shell_setting_file_path, "r") as login_shell_setting_file:
+            login_shell_setting = login_shell_setting_file.read()
+            register_sts_assumed_role = login_shell_setting[
+                login_shell_setting.find(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL) :
+            ]
+            register_sts_assumed_role = register_sts_assumed_role[
+                : register_sts_assumed_role.find(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
+                + len(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL)
+            ]
+            login_shell_setting = login_shell_setting.replace(
+                register_sts_assumed_role, function_string
+            )
+
+        with open(login_shell_setting_file_path, mode="w") as login_shell_setting_file:
+            login_shell_setting_file.write(login_shell_setting)
+        logger.info(
+            datetime.datetime.now().isoformat()
+            + "update register_sts_assumed_role to "
+            + login_shell_setting_file_path
+            + " successed."
+        )
+    else:
+        with open(login_shell_setting_file_path, mode="a") as login_shell_setting_file:
+            login_shell_setting_file.write("\n" + function_string)
+        logger.info(
+            datetime.datetime.now().isoformat()
+            + "insert register_sts_assumed_role to "
+            + login_shell_setting_file_path
+            + " successed."
+        )
 
 
-def setup_register_sts_assumed_role(setup_config, logger):
+def enabling_register_sts_assumed_role(
+    function_string, login_shell_setting_file_path, now, logger
+):
+    """
+    Enabling register_sts_assumed_role function.
+
+    Parameters
+    ----------
+    function_string : str
+        register-sts-assumed-role function string.
+    login_shell_setting_file_path : str
+        login shell setting file path.
+    now : datetime.datetime
+        current datetime.
+    logger : logger
+        logging.logger object.
+    """
+    backup_file(login_shell_setting_file_path, now, logger)
+    register_function(function_string, login_shell_setting_file_path, logger)
+
+
+def setup_register_sts_assumed_role(setup_config, now, logger):
     """
     Setup register_sts_assumed_role function to login shell setting file.
 
@@ -259,6 +330,8 @@ def setup_register_sts_assumed_role(setup_config, logger):
     ----------
     setup_config : SetupConfigVO
         loaded config detail value object.
+    now : datetime.datetime
+        current datetime.
     logger : logger
         logging.logger object.
     """
@@ -278,6 +351,7 @@ def setup_register_sts_assumed_role(setup_config, logger):
             REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, setup_config
         ),
         login_shell_setting_file_path,
+        now,
         logger,
     )
 
@@ -291,5 +365,5 @@ def setup_register_sts_assumed_role(setup_config, logger):
 if __name__ == "__main__":
     config = load_setup_config(SETUP_CONFIG_FILE_PATH)
     setup_register_sts_assumed_role(
-        config, initialize_logger_setting(),
+        config, datetime.datetime.now(), initialize_logger_setting(),
     )
