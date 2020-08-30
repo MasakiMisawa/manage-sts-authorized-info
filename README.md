@@ -33,18 +33,19 @@ todo 設定可能項目の記載
 
 ## Usage
 
-todo 後で書く
+![architecture](document/register_sts_assumed_role.gif)
 
 ## Support
 
 ### OS
 
-Supports macOS and Linux(CentOS / Ubuntu).  
+Supports MacOS(OS X) and Linux(CentOS / Ubuntu).  
 `WindowsOS not supported sorry!`
 
 ### SHELL
 
-Supports bash and zsh.
+Supports bash and zsh.  
+`Other shell not supported sorry!`
 
 ## Contributing
 
