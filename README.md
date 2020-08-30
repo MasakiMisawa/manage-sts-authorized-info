@@ -31,10 +31,13 @@ See [seup-config.yml](/config/setup-config.yml) details.
 you can customize these settings.
 
 - CONFIG_FILE
+
   - FILE_PATH str  
     AWS CLI config file path.  
     register_sts_assumed_role function overwrites the contents of this file.
+
 - REGISTER_PROFILE
+
   - PROFILE_NAME (default) str  
     Default value of the profile name to be registered in the config file.  
     this value can be overridden when the register_sts_assumed_role function is executed.
@@ -44,8 +47,8 @@ you can customize these settings.
   - OUTPUT (default) str  
     Default value of the register profile output format to be registered in the config file.  
     this value can be overridden when the register_sts_assumed_role function is executed.
-- CHANGE_LOG
 
+- CHANGE_LOG
   - FILE_PATH str  
     Log file path to execute register_sts_assumed_role function.  
     the profile information registered or deleted by register_sts_assumed_role function is recorded.
