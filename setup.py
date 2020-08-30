@@ -9,7 +9,12 @@ SETUP_CONFIG_FILE_PATH = "config/setup-config.yaml"
 SETUP_LOG_FILE_PATH = "logs/setup.log"
 BASH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.bashrc"
 ZSH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.zshrc"
-REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH = "template/register_sts_assumed_role.tmpl"
+REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH = (
+    "template/register_sts_assumed_role.bash.tmpl"
+)
+REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH = (
+    "template/register_sts_assumed_role.zsh.tmpl"
+)
 REPLACEMENT_STRING_CONFIG_FILE_PATH = "$REPLACEMENT_STRING_CONFIG_FILE_PATH"
 REPLACEMENT_STRING_REGISTER_PROFILE = "$REPLACEMENT_STRING_REGISTER_PROFILE"
 REPLACEMENT_STRING_REGION_NAME = "$REPLACEMENT_STRING_REGION_NAME"
@@ -114,6 +119,32 @@ def get_login_shell_setting_file_path(login_shell_path):
         return ZSH_LOGIN_SHELL_SETTING_FILE_PATH.replace("$HOME", os.environ["HOME"])
     elif login_shell_path == "test":
         return "test_login_shell_setting_file_path.rc"
+    else:
+        return None
+
+
+def get_register_sts_assumed_role_template_file_path(login_shell_path):
+    """
+    Get register_sts_assumed_role function string template file path.
+
+    Parameters
+    ----------
+    login_shell_path : str
+        Your local login shell path.
+
+    Returns
+    -------
+    register_sts_assumed_role_template_file_path : str
+        register-sts-assumed-role template file path.
+    """
+    if login_shell_path is None:
+        return None
+    elif login_shell_path.endswith("bash"):
+        return REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH
+    elif login_shell_path.endswith("zsh"):
+        return REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH
+    elif login_shell_path == "test":
+        return REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH
     else:
         return None
 
@@ -343,7 +374,10 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
 
     login_shell_path = os.environ["SHELL"]
     login_shell_setting_file_path = get_login_shell_setting_file_path(login_shell_path)
-    if login_shell_setting_file_path is None:
+    template_file_path = get_register_sts_assumed_role_template_file_path(
+        login_shell_path
+    )
+    if login_shell_setting_file_path is None or template_file_path is None:
         logger.error(
             datetime.datetime.now().isoformat()
             + " Login shell not supported error. login_shell_path = "
@@ -353,9 +387,7 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
         return
 
     enabling_register_sts_assumed_role(
-        generate_register_sts_assumed_role_template(
-            REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, setup_config
-        ),
+        generate_register_sts_assumed_role_template(template_file_path, setup_config),
         login_shell_setting_file_path,
         now,
         logger,

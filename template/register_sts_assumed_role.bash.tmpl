@@ -65,6 +65,7 @@ function __insert_assumed_role_register_log {
   source_profile=${4}
   mfa_serial=${5}
 
+  comment=""
   read -p "Enter a comment when you register [${register_profile}]: " comment
   if [ "${comment}" = "" ]; then
     comment="None"
@@ -95,9 +96,11 @@ function register_sts_assumed_role {
   #
   # User input(Required).
   #
+  ROLE_ARN=""
   while [ "${ROLE_ARN}" = "" ]; do
     read -p "ASSUMED ROLE ARN [None]: " ROLE_ARN
   done
+  SOURCE_PROFILE=""
   while [ "${SOURCE_PROFILE}" = "" ]; do
     read -p "SOURCE PROFILE NAME [None]: " SOURCE_PROFILE
   done
@@ -105,15 +108,19 @@ function register_sts_assumed_role {
   #
   # User input(Optional).
   #
+  override_register_profile=""
   read -p "REGISTER PROFILE NAME [${REGISTER_PROFILE}]: " override_register_profile
   if [ "${override_register_profile}" != "" ]; then
     REGISTER_PROFILE=${override_register_profile}
   fi
+  MFA_SERIAL=""
   read -p "MFA SERIAL ARN [None]: " MFA_SERIAL
+  override_region_name=""
   read -p "Default region name [${REGION_NAME}]: " override_region_name
   if [ "${override_region_name}" != "" ]; then
     REGION_NAME=${override_region_name}
   fi
+  override_output_format=""
   read -p "Default output format [${OUTPUT_FORMAT}]: " override_output_format
   if [ "${override_output_format}" != "" ]; then
     OUTPUT_FORMAT=${override_output_format}
