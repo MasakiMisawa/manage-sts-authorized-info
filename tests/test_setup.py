@@ -35,7 +35,12 @@ AWS_ALL_REGIONS = [
 CLI_ALL_OUTPUT_FORMATS = ["json", "yaml", "text", "table"]
 BASH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.bashrc"
 ZSH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.zshrc"
-REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH = "template/register_sts_assumed_role.tmpl"
+REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH = (
+    "template/register_sts_assumed_role.bash.tmpl"
+)
+REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH = (
+    "template/register_sts_assumed_role.zsh.tmpl"
+)
 REPLACEMENT_STRING_CONFIG_FILE_PATH = "$REPLACEMENT_STRING_CONFIG_FILE_PATH"
 REPLACEMENT_STRING_REGISTER_PROFILE = "$REPLACEMENT_STRING_REGISTER_PROFILE"
 REPLACEMENT_STRING_REGION_NAME = "$REPLACEMENT_STRING_REGION_NAME"
@@ -135,11 +140,58 @@ class TestSetup(unittest.TestCase):
                 login_shell_setting_file_path, login_shell["expected_value"]
             )
 
+    def test_get_register_sts_assumed_role_template_file_path_expected_value(self):
+        ## given
+        login_shells = [
+            {
+                "login_shell_path": "/bin/bash",
+                "expected_value": REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH,
+            },
+            {
+                "login_shell_path": "/usr/local/bin/zsh",
+                "expected_value": REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH,
+            },
+            {
+                "login_shell_path": "test",
+                "expected_value": REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH,
+            },
+            {"login_shell_path": "/bin/tcsh", "expected_value": None},
+            {"login_shell_path": None, "expected_value": None},
+        ]
+
+        for login_shell in login_shells:
+            ## when
+            register_sts_assumed_role_template_file_path = setup.get_register_sts_assumed_role_template_file_path(
+                login_shell["login_shell_path"]
+            )
+
+            ## then
+            self.assertEqual(
+                register_sts_assumed_role_template_file_path,
+                login_shell["expected_value"],
+            )
+
     def test_generate_register_sts_assumed_role_template_expected_value(self):
         ## given
-        with open(REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, "r") as template_file:
-            expected_value = (
-                template_file.read()
+        with open(
+            REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH, "r"
+        ) as bash_template_file:
+            bash_expected_value = bash_template_file.read()
+        with open(
+            REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH, "r"
+        ) as zsh_template_file:
+            zsh_expected_value = zsh_template_file.read()
+
+        login_shells = [
+            {"login_shell_path": "/bin/bash", "expected_value": bash_expected_value},
+            {
+                "login_shell_path": "/usr/local/bin/zsh",
+                "expected_value": zsh_expected_value,
+            },
+        ]
+        for login_shell in login_shells:
+            login_shell["expected_value"] = (
+                login_shell["expected_value"]
                 .replace(REPLACEMENT_STRING_CONFIG_FILE_PATH, "$HOME/.aws/config")
                 .replace(REPLACEMENT_STRING_REGISTER_PROFILE, "sts-session")
                 .replace(REPLACEMENT_STRING_REGION_NAME, "ap-northeast-1")
@@ -151,95 +203,110 @@ class TestSetup(unittest.TestCase):
             )
 
         ## when
-        str_register_sts_assumed_role = setup.generate_register_sts_assumed_role_template(
-            setup.REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH,
-            setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH),
-        )
+        for login_shell in login_shells:
+            str_register_sts_assumed_role = setup.generate_register_sts_assumed_role_template(
+                setup.get_register_sts_assumed_role_template_file_path(
+                    login_shell["login_shell_path"]
+                ),
+                setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH),
+            )
 
-        ## then
-        self.assertEqual(str_register_sts_assumed_role, expected_value)
+            ## then
+            self.assertEqual(
+                str_register_sts_assumed_role, login_shell["expected_value"]
+            )
 
     def test_replace_replacement_string(self):
-        ## given
-        exist_config_file_path_replacement_string_before_replace = False
-        exist_profile_name_replacement_string_before_replace = False
-        exist_region_replacement_string_before_replace = False
-        exist_output_replacement_string_before_replace = False
-        exist_change_log_file_path_replacement_string_before_replace = False
-        not_exist_config_file_path_before_replace = False
-        not_exist_profile_name_before_replace = False
-        not_exist_region_before_replace = False
-        not_exist_output_before_replace = False
-        not_exist_change_log_file_path_before_replace = False
+        template_file_paths = [
+            setup.REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH,
+            setup.REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH,
+        ]
+        for template_file_path in template_file_paths:
+            ## given
+            exist_config_file_path_replacement_string_before_replace = False
+            exist_profile_name_replacement_string_before_replace = False
+            exist_region_replacement_string_before_replace = False
+            exist_output_replacement_string_before_replace = False
+            exist_change_log_file_path_replacement_string_before_replace = False
+            not_exist_config_file_path_before_replace = False
+            not_exist_profile_name_before_replace = False
+            not_exist_region_before_replace = False
+            not_exist_output_before_replace = False
+            not_exist_change_log_file_path_before_replace = False
 
-        config = setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH)
-        config_file_path = config.config_file_path
-        profile_name = config.profile_name
-        region = config.region
-        output = config.output
-        change_log_file_path = config.change_log_file_path
-        with open(setup.REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH, "r") as f:
-            before_template = f.read()
-            if REPLACEMENT_STRING_CONFIG_FILE_PATH in before_template:
-                exist_config_file_path_replacement_string_before_replace = True
-            if REPLACEMENT_STRING_REGISTER_PROFILE in before_template:
-                exist_profile_name_replacement_string_before_replace = True
-            if REPLACEMENT_STRING_REGION_NAME in before_template:
-                exist_region_replacement_string_before_replace = True
-            if REPLACEMENT_STRING_OUTPUT_FORMAT in before_template:
-                exist_output_replacement_string_before_replace = True
-            if REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH in before_template:
-                exist_change_log_file_path_replacement_string_before_replace = True
-            if config_file_path not in before_template:
-                not_exist_config_file_path_before_replace = True
-            if profile_name not in before_template:
-                not_exist_profile_name_before_replace = True
-            if region not in before_template:
-                not_exist_region_before_replace = True
-            if output not in before_template:
-                not_exist_output_before_replace = True
-            if change_log_file_path not in before_template:
-                not_exist_change_log_file_path_before_replace = True
+            config = setup.load_setup_config(SETUP_CONFIG_FILE_PATH)
+            config_file_path = config.config_file_path
+            profile_name = config.profile_name
+            region = config.region
+            output = config.output
+            change_log_file_path = config.change_log_file_path
+            with open(template_file_path, "r") as f:
+                before_template = f.read()
+                if REPLACEMENT_STRING_CONFIG_FILE_PATH in before_template:
+                    exist_config_file_path_replacement_string_before_replace = True
+                if REPLACEMENT_STRING_REGISTER_PROFILE in before_template:
+                    exist_profile_name_replacement_string_before_replace = True
+                if REPLACEMENT_STRING_REGION_NAME in before_template:
+                    exist_region_replacement_string_before_replace = True
+                if REPLACEMENT_STRING_OUTPUT_FORMAT in before_template:
+                    exist_output_replacement_string_before_replace = True
+                if REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH in before_template:
+                    exist_change_log_file_path_replacement_string_before_replace = True
+                if config_file_path not in before_template:
+                    not_exist_config_file_path_before_replace = True
+                if profile_name not in before_template:
+                    not_exist_profile_name_before_replace = True
+                if region not in before_template:
+                    not_exist_region_before_replace = True
+                if output not in before_template:
+                    not_exist_output_before_replace = True
+                if change_log_file_path not in before_template:
+                    not_exist_change_log_file_path_before_replace = True
 
-        ## when
-        str_register_sts_assumed_role = setup.replace_replacement_string(
-            before_template,
-            config_file_path,
-            profile_name,
-            region,
-            output,
-            change_log_file_path,
-        )
+            ## when
+            config = setup.load_setup_config(setup.SETUP_CONFIG_FILE_PATH)
+            str_register_sts_assumed_role = setup.replace_replacement_string(
+                before_template,
+                config.config_file_path,
+                config.profile_name,
+                config.region,
+                config.output,
+                config.change_log_file_path,
+            )
 
-        ## then
-        self.assertIn(config_file_path, str_register_sts_assumed_role)
-        self.assertNotIn(
-            REPLACEMENT_STRING_CONFIG_FILE_PATH, str_register_sts_assumed_role
-        )
-        self.assertIn(profile_name, str_register_sts_assumed_role)
-        self.assertNotIn(
-            REPLACEMENT_STRING_REGISTER_PROFILE, str_register_sts_assumed_role
-        )
-        self.assertIn(region, str_register_sts_assumed_role)
-        self.assertNotIn(REPLACEMENT_STRING_REGION_NAME, str_register_sts_assumed_role)
-        self.assertIn(output, str_register_sts_assumed_role)
-        self.assertNotIn(
-            REPLACEMENT_STRING_OUTPUT_FORMAT, str_register_sts_assumed_role
-        )
-        self.assertIn(change_log_file_path, str_register_sts_assumed_role)
-        self.assertNotIn(
-            REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH, str_register_sts_assumed_role
-        )
-        self.assertTrue(exist_config_file_path_replacement_string_before_replace)
-        self.assertTrue(exist_profile_name_replacement_string_before_replace)
-        self.assertTrue(exist_region_replacement_string_before_replace)
-        self.assertTrue(exist_output_replacement_string_before_replace)
-        self.assertTrue(exist_change_log_file_path_replacement_string_before_replace)
-        self.assertTrue(not_exist_config_file_path_before_replace)
-        self.assertTrue(not_exist_profile_name_before_replace)
-        self.assertTrue(not_exist_region_before_replace)
-        self.assertTrue(not_exist_output_before_replace)
-        self.assertTrue(not_exist_change_log_file_path_before_replace)
+            ## then
+            self.assertIn(config_file_path, str_register_sts_assumed_role)
+            self.assertNotIn(
+                REPLACEMENT_STRING_CONFIG_FILE_PATH, str_register_sts_assumed_role
+            )
+            self.assertIn(profile_name, str_register_sts_assumed_role)
+            self.assertNotIn(
+                REPLACEMENT_STRING_REGISTER_PROFILE, str_register_sts_assumed_role
+            )
+            self.assertIn(region, str_register_sts_assumed_role)
+            self.assertNotIn(
+                REPLACEMENT_STRING_REGION_NAME, str_register_sts_assumed_role
+            )
+            self.assertIn(output, str_register_sts_assumed_role)
+            self.assertNotIn(
+                REPLACEMENT_STRING_OUTPUT_FORMAT, str_register_sts_assumed_role
+            )
+            self.assertIn(change_log_file_path, str_register_sts_assumed_role)
+            self.assertNotIn(
+                REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH, str_register_sts_assumed_role
+            )
+            self.assertTrue(exist_config_file_path_replacement_string_before_replace)
+            self.assertTrue(exist_profile_name_replacement_string_before_replace)
+            self.assertTrue(exist_region_replacement_string_before_replace)
+            self.assertTrue(exist_output_replacement_string_before_replace)
+            self.assertTrue(
+                exist_change_log_file_path_replacement_string_before_replace
+            )
+            self.assertTrue(not_exist_config_file_path_before_replace)
+            self.assertTrue(not_exist_profile_name_before_replace)
+            self.assertTrue(not_exist_region_before_replace)
+            self.assertTrue(not_exist_output_before_replace)
+            self.assertTrue(not_exist_change_log_file_path_before_replace)
 
     def test_backup_file_success(self):
         ## given
@@ -336,127 +403,149 @@ class TestSetup(unittest.TestCase):
         os.remove(exist_signal_but_wrong_order_file_path)
 
     def test_register_function_insert_success(self):
-        ## given
-        function_string = self.__generate_function_string()
-        insert_file_path = "test_register_function_insert_success.rc"
-        test_string = "test"
-        with open(insert_file_path, "w") as insert_file:
-            insert_file.write(test_string)
-
-        ## when
-        setup.register_function(function_string, insert_file_path, logger)
-
-        ## then
-        with open(insert_file_path, "r") as result_file:
-            self.assertEqual(result_file.read(), test_string + "\n" + function_string)
-
-        os.remove(insert_file_path)
-
-    def test_register_function_update_success(self):
-        ## given
-        function_string = self.__generate_function_string()
-        update_file_path = "test_register_function_update_success.rc"
-        test_replaced_string = "test_replaced_string"
-        before_text = "before"
-        after_text = "after"
-        with open(update_file_path, "w") as update_file:
-            update_file.writelines(before_text + "\n")
-            update_file.writelines(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL + "\n")
-            update_file.writelines(test_replaced_string + "\n")
-            update_file.writelines(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL + "\n")
-            update_file.writelines(after_text)
-
-        ## when
-        setup.register_function(function_string, update_file_path, logger)
-
-        ## then
-        with open(update_file_path, "r") as result_file:
-            login_shell_setting = result_file.read()
-            self.assertNotIn(login_shell_setting, test_replaced_string)
-            self.assertEqual(
-                login_shell_setting,
-                before_text + "\n" + function_string + "\n" + after_text,
+        login_shells = ["/bin/bash", "/usr/local/bin/zsh"]
+        for login_shell in login_shells:
+            ## given
+            function_string = self.__generate_function_string(login_shell)
+            insert_file_path = (
+                "test_register_function"
+                + login_shell.replace("/", "_")
+                + "_insert_success.rc"
             )
+            test_string = "test"
+            with open(insert_file_path, "w") as insert_file:
+                insert_file.write(test_string)
 
-        os.remove(update_file_path)
-
-    def test_enabling_register_sts_assumed_role_success(self):
-        ## given
-        function_string = self.__generate_function_string()
-        test_string = "test"
-        now = datetime.datetime.now()
-
-        login_shell_setting_insert_file_path = (
-            "test_enabling_register_sts_assumed_role_success_insert.rc"
-        )
-        with open(
-            login_shell_setting_insert_file_path, "w"
-        ) as login_shell_setting_insert_file:
-            login_shell_setting_insert_file.write(test_string)
-
-        before_text = "before"
-        after_text = "after"
-        login_shell_setting_update_file_path = (
-            "test_enabling_register_sts_assumed_role_success_update.rc"
-        )
-        update_before_text = (
-            before_text
-            + "\n"
-            + REGISTER_STS_ASSUMED_ROLE_START_SIGNAL
-            + "\n"
-            + test_string
-            + "\n"
-            + REGISTER_STS_ASSUMED_ROLE_END_SIGNAL
-            + "\n"
-            + after_text
-        )
-        with open(
-            login_shell_setting_update_file_path, "w"
-        ) as login_shell_setting_update_file:
-            login_shell_setting_update_file.write(update_before_text)
-
-        login_shell_settings = [
-            {
-                "login_shell_settig_file_path": login_shell_setting_insert_file_path,
-                "before_expected_value": test_string,
-                "after_expected_value": test_string + "\n" + function_string,
-            },
-            {
-                "login_shell_settig_file_path": login_shell_setting_update_file_path,
-                "before_expected_value": update_before_text,
-                "after_expected_value": before_text
-                + "\n"
-                + function_string
-                + "\n"
-                + after_text,
-            },
-        ]
-
-        for login_shell_setting in login_shell_settings:
             ## when
-            login_shell_setting_file_path = login_shell_setting[
-                "login_shell_settig_file_path"
-            ]
-            setup.enabling_register_sts_assumed_role(
-                function_string, login_shell_setting_file_path, now, logger
-            )
+            setup.register_function(function_string, insert_file_path, logger)
 
             ## then
-            backup_file_path = (
-                login_shell_setting_file_path + "_bk_" + now.strftime("%Y%m%d%H%M%S")
-            )
-            self.assertTrue(os.path.exists(backup_file_path))
-            with open(backup_file_path, "r") as backup_file:
+            with open(insert_file_path, "r") as result_file:
                 self.assertEqual(
-                    backup_file.read(), login_shell_setting["before_expected_value"]
-                )
-            with open(login_shell_setting_file_path, "r") as result_file:
-                self.assertEqual(
-                    result_file.read(), login_shell_setting["after_expected_value"]
+                    result_file.read(), test_string + "\n" + function_string
                 )
 
-            os.remove(login_shell_setting_file_path)
-            os.remove(backup_file_path)
+            os.remove(insert_file_path)
+
+    def test_register_function_update_success(self):
+        login_shells = ["/bin/bash", "/usr/local/bin/zsh"]
+        for login_shell in login_shells:
+            ## given
+            function_string = self.__generate_function_string(login_shell)
+            update_file_path = (
+                "test_register_function"
+                + login_shell.replace("/", "_")
+                + "_update_success.rc"
+            )
+            test_replaced_string = "test_replaced_string"
+            before_text = "before"
+            after_text = "after"
+            with open(update_file_path, "w") as update_file:
+                update_file.writelines(before_text + "\n")
+                update_file.writelines(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL + "\n")
+                update_file.writelines(test_replaced_string + "\n")
+                update_file.writelines(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL + "\n")
+                update_file.writelines(after_text)
+
+            ## when
+            setup.register_function(function_string, update_file_path, logger)
+
+            ## then
+            with open(update_file_path, "r") as result_file:
+                login_shell_setting = result_file.read()
+                self.assertNotIn(login_shell_setting, test_replaced_string)
+                self.assertEqual(
+                    login_shell_setting,
+                    before_text + "\n" + function_string + "\n" + after_text,
+                )
+
+            os.remove(update_file_path)
+
+    def test_enabling_register_sts_assumed_role_success(self):
+        login_shells = ["/bin/bash", "/usr/local/bin/zsh"]
+        for login_shell in login_shells:
+            ## given
+            function_string = self.__generate_function_string(login_shell)
+            test_string = "test"
+            now = datetime.datetime.now()
+
+            login_shell_setting_insert_file_path = (
+                "test_enabling_register_sts_assumed_role_success"
+                + login_shell.replace("/", "_")
+                + "_insert.rc"
+            )
+            with open(
+                login_shell_setting_insert_file_path, "w"
+            ) as login_shell_setting_insert_file:
+                login_shell_setting_insert_file.write(test_string)
+
+            before_text = "before"
+            after_text = "after"
+            login_shell_setting_update_file_path = (
+                "test_enabling_register_sts_assumed_role_success"
+                + login_shell.replace("/", "_")
+                + "_update.rc"
+            )
+            update_before_text = (
+                before_text
+                + "\n"
+                + REGISTER_STS_ASSUMED_ROLE_START_SIGNAL
+                + "\n"
+                + test_string
+                + "\n"
+                + REGISTER_STS_ASSUMED_ROLE_END_SIGNAL
+                + "\n"
+                + after_text
+            )
+            with open(
+                login_shell_setting_update_file_path, "w"
+            ) as login_shell_setting_update_file:
+                login_shell_setting_update_file.write(update_before_text)
+
+            login_shell_settings = [
+                {
+                    "login_shell_settig_file_path": login_shell_setting_insert_file_path,
+                    "before_expected_value": test_string,
+                    "after_expected_value": test_string + "\n" + function_string,
+                },
+                {
+                    "login_shell_settig_file_path": login_shell_setting_update_file_path,
+                    "before_expected_value": update_before_text,
+                    "after_expected_value": before_text
+                    + "\n"
+                    + function_string
+                    + "\n"
+                    + after_text,
+                },
+            ]
+
+            for login_shell_setting in login_shell_settings:
+                ## when
+                login_shell_setting_file_path = login_shell_setting[
+                    "login_shell_settig_file_path"
+                ]
+                setup.enabling_register_sts_assumed_role(
+                    function_string, login_shell_setting_file_path, now, logger
+                )
+
+                ## then
+                backup_file_path = (
+                    login_shell_setting_file_path
+                    + "_bk_"
+                    + now.strftime("%Y%m%d%H%M%S")
+                )
+                self.assertTrue(os.path.exists(backup_file_path))
+                with open(backup_file_path, "r") as backup_file:
+                    self.assertEqual(
+                        backup_file.read(), login_shell_setting["before_expected_value"]
+                    )
+                with open(login_shell_setting_file_path, "r") as result_file:
+                    self.assertEqual(
+                        result_file.read(), login_shell_setting["after_expected_value"]
+                    )
+
+                os.remove(login_shell_setting_file_path)
+                os.remove(backup_file_path)
 
     def test_setup_register_sts_assumed_role_success(self):
         ## given
@@ -511,7 +600,7 @@ class TestSetup(unittest.TestCase):
             )
 
         function_string = setup.generate_register_sts_assumed_role_template(
-            REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH,
+            REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH,
             setup.load_setup_config(SETUP_CONFIG_FILE_PATH),
         )
         with open(login_shell_setting_file_path, "r") as result_file:
@@ -552,7 +641,6 @@ class TestSetup(unittest.TestCase):
 
     def test_setup_register_sts_assumed_role_login_shell_not_supported(self):
         ## given
-        ## given
         now = datetime.datetime.now()
         if "SHELL" in os.environ:
             before_shell_environ = os.environ["SHELL"]
@@ -577,10 +665,13 @@ class TestSetup(unittest.TestCase):
     ####################################
     ########## Private Method ##########
     ####################################
-    def __generate_function_string(self):
+    def __generate_function_string(self, login_shell_path):
+        if login_shell_path.endswith("bash"):
+            template_file_path = REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH
+        elif login_shell_path.endswith("zsh"):
+            template_file_path = REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH
         return setup.generate_register_sts_assumed_role_template(
-            REGISTER_STS_ASSUMED_ROLE_TEMPLATE_FILE_PATH,
-            setup.load_setup_config(SETUP_CONFIG_FILE_PATH),
+            template_file_path, setup.load_setup_config(SETUP_CONFIG_FILE_PATH),
         )
 
     @classmethod
