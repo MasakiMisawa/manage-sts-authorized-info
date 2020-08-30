@@ -85,7 +85,7 @@ See [CONTRIBUTING.md](/.github/CONTRIBUTING.md) details.
 $ brew install yarn black
 ```
 
-2. Node moudle setup.
+2. Node module setup.
 
 ```
 $ yarn install
