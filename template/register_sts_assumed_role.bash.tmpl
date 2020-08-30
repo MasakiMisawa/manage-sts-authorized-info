@@ -24,7 +24,7 @@ function __generate_register_profile_for_config_file {
   fi
   generated_profile+="region = ${region_name}\n"
   generated_profile+="output = ${output_format}\n"
-  echo -c "${generated_profile}"
+  echo -e "${generated_profile}"
 }
 
 function __insert_assumed_role_delete_log {
@@ -55,7 +55,7 @@ function __insert_assumed_role_delete_log {
   fi
   delete_log+="\n"
 
-  echo -c "${delete_log}" >> ${change_log_file_path}
+  echo -e "${delete_log}" >> ${change_log_file_path}
 }
 
 function __insert_assumed_role_register_log {
@@ -80,7 +80,7 @@ function __insert_assumed_role_register_log {
   fi
   register_log+="\"registered comment = ${comment}\"\n"
 
-  echo -c "${register_log}" >> ${change_log_file_path}
+  echo -e "${register_log}" >> ${change_log_file_path}
 }
 
 function register_sts_assumed_role {
@@ -168,7 +168,7 @@ function register_sts_assumed_role {
   #
   # Overwrite config file.
   #
-  echo -c "${overwrite_config}" > ${CONFIG_FILE_PATH}
+  echo -e "${overwrite_config}" > ${CONFIG_FILE_PATH}
   
   #
   # Insert change log.
