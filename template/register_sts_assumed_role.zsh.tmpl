@@ -1,0 +1,183 @@
+###### register_sts_assumed_role starts here ######
+function __backup_original_config {
+  cp ${1} "${1}_bk_$(date "+%Y%m%d%H%M%S")"
+}
+
+function __generate_register_profile_for_config_file {
+  register_profile=${1}
+  role_arn=${2}
+  source_profile=${3}
+  region_name=${4}
+  output_format=${5}
+  mfa_serial=${6}
+  
+  generated_profile="\n"
+  if [ "${register_profile}" = "default" ]; then
+    generated_profile+="[default]\n"
+  else
+    generated_profile+="[profile ${register_profile}]\n"
+  fi
+  generated_profile+="role_arn = ${role_arn}\n"
+  generated_profile+="source_profile = ${source_profile}\n"
+  if [ "${mfa_serial}" != "" ]; then
+    generated_profile+="mfa_serial = ${mfa_serial}\n"
+  fi
+  generated_profile+="region = ${region_name}\n"
+  generated_profile+="output = ${output_format}\n"
+  echo "${generated_profile}"
+}
+
+function __insert_assumed_role_delete_log {
+  change_log_file_path=${1}
+  delete_profile_name=${2}
+
+  shift 2
+  for delete_profile in "${@}"; do
+    if [ "${delete_profile:0:8}" = "role_arn" ]; then
+      delete_role_arn=${delete_profile}
+    elif [ "${delete_profile:0:14}" = "source_profile" ]; then
+      delete_source_profile=${delete_profile}
+    elif [ "${delete_profile:0:10}" = "mfa_serial" ]; then
+      delete_mfa_serial=${delete_profile}
+    fi
+  done
+
+  delete_log="DELETED - - [$(LANG="C" date "+%d/%b/%Y:%H:%M:%S %z")] "
+  delete_log+="\"profile = ${delete_profile_name}\" "
+  if [ "${delete_role_arn}" != "" ]; then
+    delete_log+="\"${delete_role_arn}\" "
+  fi
+  if [ "${delete_source_profile}" != "" ]; then
+    delete_log+="\"${delete_source_profile}\" "
+  fi
+  if [ "${delete_mfa_serial}" != "" ]; then
+    delete_log+="\"${delete_mfa_serial}\" "
+  fi
+  delete_log+="\n"
+
+  echo "${delete_log}" >> ${change_log_file_path}
+}
+
+function __insert_assumed_role_register_log {
+  change_log_file_path=${1}
+  register_profile=${2}
+  role_arn=${3}
+  source_profile=${4}
+  mfa_serial=${5}
+
+  comment=""
+  read "comment?Enter a comment when you register [${register_profile}]: "
+  if [ "${comment}" = "" ]; then
+    comment="None"
+  fi
+
+  register_log="REGISTERED - - [$(LANG="C" date "+%d/%b/%Y:%H:%M:%S %z")] "
+  register_log+="\"profile = ${register_profile}\" "
+  register_log+="\"role_arn = ${role_arn}\" "
+  register_log+="\"source_profile = ${source_profile}\" "
+  if [ "${mfa_serial}" != "" ]; then
+    register_log+="\"mfa_serial = ${mfa_serial}\" "
+  fi
+  register_log+="\"registered comment = ${comment}\"\n"
+
+  echo "${register_log}" >> ${change_log_file_path}
+}
+
+function register_sts_assumed_role {
+  #
+  # Const value.
+  #
+  CONFIG_FILE_PATH=$REPLACEMENT_STRING_CONFIG_FILE_PATH # set from setup.py
+  REGISTER_PROFILE=$REPLACEMENT_STRING_REGISTER_PROFILE # set from setup.py
+  REGION_NAME=$REPLACEMENT_STRING_REGION_NAME # set from setup.py
+  OUTPUT_FORMAT=$REPLACEMENT_STRING_OUTPUT_FORMAT # set from setup.py
+  CHANGE_LOG_FILE_PATH=$REPLACEMENT_STRING_CHANGE_LOG_FILE_PATH # set from setup.py
+  
+  #
+  # User input(Required).
+  #
+  ROLE_ARN=""
+  while [ "${ROLE_ARN}" = "" ]; do
+    read "ROLE_ARN?ASSUMED ROLE ARN [None]: "
+  done
+  SOURCE_PROFILE=""
+  while [ "${SOURCE_PROFILE}" = "" ]; do
+    read "SOURCE_PROFILE?SOURCE PROFILE NAME [None]: "
+  done
+
+  #
+  # User input(Optional).
+  #
+  override_register_profile=""
+  read "override_register_profile?REGISTER PROFILE NAME [${REGISTER_PROFILE}]: "
+  if [ "${override_register_profile}" != "" ]; then
+    REGISTER_PROFILE=${override_register_profile}
+  fi
+  MFA_SERIAL=""
+  read "MFA_SERIAL?MFA SERIAL ARN [None]: "
+  override_region_name=""
+  read "override_region_name?Default region name [${REGION_NAME}]: "
+  if [ "${override_region_name}" != "" ]; then
+    REGION_NAME=${override_region_name}
+  fi
+  override_output_format=""
+  read "override_output_format?Default output format [${OUTPUT_FORMAT}]: "
+  if [ "${override_output_format}" != "" ]; then
+    OUTPUT_FORMAT=${override_output_format}
+  fi
+
+  __backup_original_config ${CONFIG_FILE_PATH}
+
+  #
+  # Create overwrite config detail.
+  #
+  overwrite_config=""
+  is_delete_profile=false
+  declare -a delete_profile=()
+  while read line || [ -n "${line}" ]; do
+    if [ "${line}" = "" ]; then
+      continue
+    fi
+
+    if [ "${line}" = "[profile ${REGISTER_PROFILE}]" ] || [ "${line}" = "[${REGISTER_PROFILE}]" ]; then
+      delete_profile=("${delete_profile[@]}" "${line}")
+      is_delete_profile=true
+      continue
+    fi
+
+    if "${is_delete_profile}"; then
+      if [ "${line:0:8}" = "[profile" ] || [ "${line:0:9}" = "[default]" ]; then
+        is_delete_profile=false
+      else
+        delete_profile=("${delete_profile[@]}" "${line}")
+        continue
+      fi
+    fi
+
+    if [ "${line:0:8}" = "[profile" ] || [ "${line:0:9}" = "[default]" ]; then
+      if [ "${overwrite_config}" != "" ]; then
+        overwrite_config+="\n"
+      fi
+    fi
+
+    overwrite_config+="${line}\n"
+  done<${CONFIG_FILE_PATH}
+
+  overwrite_config+=`__generate_register_profile_for_config_file ${REGISTER_PROFILE} ${ROLE_ARN} ${SOURCE_PROFILE} ${REGION_NAME} ${OUTPUT_FORMAT} ${MFA_SERIAL}`
+
+  #
+  # Overwrite config file.
+  #
+  echo "${overwrite_config}" > ${CONFIG_FILE_PATH}
+  
+  #
+  # Insert change log.
+  #
+  if [ -n "$delete_profile" ]; then
+    __insert_assumed_role_delete_log ${CHANGE_LOG_FILE_PATH} ${REGISTER_PROFILE} "${delete_profile[@]}"
+  fi
+  __insert_assumed_role_register_log ${CHANGE_LOG_FILE_PATH} ${REGISTER_PROFILE} ${ROLE_ARN} ${SOURCE_PROFILE} ${MFA_SERIAL}
+
+  echo "register_sts_assumed_role DONE!"
+}
+###### register_sts_assumed_role ends here ######
