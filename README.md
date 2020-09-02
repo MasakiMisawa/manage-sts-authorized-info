@@ -26,7 +26,7 @@ $ python setup.py
 
 ### Install config.
 
-See [seup-config.yml](/config/setup-config.yml) details.
+See [seup-config.yaml](/config/setup-config.yaml) details.
 
 you can customize these settings.
 
