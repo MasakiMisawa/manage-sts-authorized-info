@@ -1,0 +1,14 @@
+setup:
+  config_file:
+    file_path: "$HOME/.aws/config"
+
+  register_profile:
+    profile_name:
+      default: "sts-session"
+    region:
+      default: "ap-northeast-1"
+    output:
+      default: "json"
+
+  change_log:
+    file_path: "$HOME/.aws/sts_assumed_role.log"
