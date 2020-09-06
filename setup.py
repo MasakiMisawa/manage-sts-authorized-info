@@ -9,11 +9,15 @@ SETUP_CONFIG_FILE_PATH = "config/setup-config.yaml"
 SETUP_LOG_FILE_PATH = "logs/setup.log"
 BASH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.bashrc"
 ZSH_LOGIN_SHELL_SETTING_FILE_PATH = "$HOME/.zshrc"
+TEST_LOGIN_SHELL_SETTING_FILE_PATH = "tests/test_login_shell_setting_file_path.rc"
 REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH = (
     "template/register_sts_assumed_role.bash.tmpl"
 )
 REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH = (
     "template/register_sts_assumed_role.zsh.tmpl"
+)
+REGISTER_STS_ASSUMED_ROLE_TEST_TEMPLATE_FILE_PATH = (
+    "tests/template/register_sts_assumed_role.test.tmpl"
 )
 REPLACEMENT_STRING_CONFIG_FILE_PATH = "$REPLACEMENT_STRING_CONFIG_FILE_PATH"
 REPLACEMENT_STRING_REGISTER_PROFILE = "$REPLACEMENT_STRING_REGISTER_PROFILE"
@@ -53,21 +57,16 @@ class SetupConfigVO:
         self.change_log_file_path = change_log_file_path
 
 
-def load_setup_config(yaml_file_path):
+def load_setup_config():
     """
     Load setup config from yaml file.
-
-    Parameters
-    ----------
-    yaml_file_path : str
-        setup-config yaml file path.
 
     Returns
     -------
     setup_config : SetupConfigVO
         loaded config detail value object.
     """
-    with open(yaml_file_path, "r") as config_file:
+    with open(SETUP_CONFIG_FILE_PATH, "r") as config_file:
         config = yaml.load(config_file, Loader=yaml.SafeLoader)["setup"]
 
     register_profile = config["register_profile"]
@@ -118,7 +117,7 @@ def get_login_shell_setting_file_path(login_shell_path):
     elif login_shell_path.endswith("zsh"):
         return ZSH_LOGIN_SHELL_SETTING_FILE_PATH.replace("$HOME", os.environ["HOME"])
     elif login_shell_path == "test":
-        return "test_login_shell_setting_file_path.rc"
+        return TEST_LOGIN_SHELL_SETTING_FILE_PATH
     else:
         return None
 
@@ -144,7 +143,7 @@ def get_register_sts_assumed_role_template_file_path(login_shell_path):
     elif login_shell_path.endswith("zsh"):
         return REGISTER_STS_ASSUMED_ROLE_ZSH_TEMPLATE_FILE_PATH
     elif login_shell_path == "test":
-        return REGISTER_STS_ASSUMED_ROLE_BASH_TEMPLATE_FILE_PATH
+        return REGISTER_STS_ASSUMED_ROLE_TEST_TEMPLATE_FILE_PATH
     else:
         return None
 
@@ -251,9 +250,7 @@ def backup_file(file_path, now, logger):
     return backup_file_path
 
 
-def exist_register_sts_assumed_role(
-    login_shell_setting_file_path, start_signal, end_signal
-):
+def exist_register_sts_assumed_role(login_shell_setting_file_path):
     """
     Already exist register_sts_assumed_role function from login shell setting file.
 
@@ -261,10 +258,6 @@ def exist_register_sts_assumed_role(
     ----------
     login_shell_setting_file_path : str
         login shell setting file path.
-    start_signal : str
-        register_sts_assumed_role function start signal.
-    end_signal : str
-        register_sts_assumed_role function end signal.
 
     Returns
     -------
@@ -276,12 +269,12 @@ def exist_register_sts_assumed_role(
 
     with open(login_shell_setting_file_path, "r") as login_shell_setting_file:
         login_shell_setting = login_shell_setting_file.read()
-        start_index = login_shell_setting.find(start_signal)
+        start_index = login_shell_setting.find(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL)
         if start_index < 0:
             return False
 
         register_sts_assumed_role = login_shell_setting[start_index:]
-        return register_sts_assumed_role.find(end_signal) >= len(start_signal)
+        return register_sts_assumed_role.find(REGISTER_STS_ASSUMED_ROLE_END_SIGNAL) >= len(REGISTER_STS_ASSUMED_ROLE_START_SIGNAL)
 
 
 def register_function(function_string, login_shell_setting_file_path, logger):
@@ -297,11 +290,7 @@ def register_function(function_string, login_shell_setting_file_path, logger):
     logger : logger
         logging.logger object.
     """
-    if exist_register_sts_assumed_role(
-        login_shell_setting_file_path,
-        REGISTER_STS_ASSUMED_ROLE_START_SIGNAL,
-        REGISTER_STS_ASSUMED_ROLE_END_SIGNAL,
-    ):
+    if exist_register_sts_assumed_role(login_shell_setting_file_path):
         with open(login_shell_setting_file_path, "r") as login_shell_setting_file:
             login_shell_setting = login_shell_setting_file.read()
             before_function = login_shell_setting[
@@ -332,27 +321,6 @@ def register_function(function_string, login_shell_setting_file_path, logger):
             + login_shell_setting_file_path
             + " successed."
         )
-
-
-def enabling_register_sts_assumed_role(
-    function_string, login_shell_setting_file_path, now, logger
-):
-    """
-    Enabling register_sts_assumed_role function.
-
-    Parameters
-    ----------
-    function_string : str
-        register-sts-assumed-role function string.
-    login_shell_setting_file_path : str
-        login shell setting file path.
-    now : datetime.datetime
-        current datetime.
-    logger : logger
-        logging.logger object.
-    """
-    backup_file(login_shell_setting_file_path, now, logger)
-    register_function(function_string, login_shell_setting_file_path, logger)
 
 
 def setup_register_sts_assumed_role(setup_config, now, logger):
@@ -386,11 +354,11 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
         print("Sorry. the only supported login shells are bash and zsh.")
         return
 
-    enabling_register_sts_assumed_role(
+    backup_file(login_shell_setting_file_path, now, logger)
+    register_function(
         generate_register_sts_assumed_role_template(template_file_path, setup_config),
         login_shell_setting_file_path,
-        now,
-        logger,
+        logger
     )
 
     logger.info(
@@ -405,7 +373,6 @@ def setup_register_sts_assumed_role(setup_config, now, logger):
 
 
 if __name__ == "__main__":
-    config = load_setup_config(SETUP_CONFIG_FILE_PATH)
     setup_register_sts_assumed_role(
-        config, datetime.datetime.now(), initialize_logger_setting(),
+        load_setup_config(), datetime.datetime.now(), initialize_logger_setting(),
     )
