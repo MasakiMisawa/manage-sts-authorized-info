@@ -4,6 +4,8 @@ phases:
   install:
     runtime-versions:
       python: 3.8
+    commands:
+      - pip install parameterized
 
   build:
     commands:
