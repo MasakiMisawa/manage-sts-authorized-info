@@ -20,6 +20,7 @@ It provides two merit.
 ### How to install/reinstall.
 
 ```
+$ pip install PyYAML
 $ cd ${PROJECT_ROOT}
 $ python setup.py
 ```
