@@ -109,6 +109,14 @@ git secrets --register-aws
 **Please don't use 'git secrets --install' command.**  
 **.git/hooks/pre-commit is already used by husky.**
 
+- **Test**
+
+1. install parameterized.
+
+```
+pip install parameterized
+```
+
 ### Test
 
 ```
