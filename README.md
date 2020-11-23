@@ -20,6 +20,7 @@ It provides two merit.
 ### How to install/reinstall.
 
 ```
+$ pip install PyYAML
 $ cd ${PROJECT_ROOT}
 $ python setup.py
 ```
@@ -107,6 +108,14 @@ git secrets --register-aws
 
 **Please don't use 'git secrets --install' command.**  
 **.git/hooks/pre-commit is already used by husky.**
+
+- **Test**
+
+1. install parameterized.
+
+```
+pip install parameterized
+```
 
 ### Test
 
