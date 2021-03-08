@@ -359,9 +359,9 @@ lint-staged@^10.5.4:
     stringify-object "^3.3.0"
 
 listr2@^3.2.2:
-  version "3.4.1"
-  resolved "https://registry.yarnpkg.com/listr2/-/listr2-3.4.1.tgz#3c90d6add087f648c7ab7173e4520ddfd10f0e21"
-  integrity sha512-TYim70Kml0vISlYH7mWHqeiBytkfDwWtp4Z+HmxEXWkXCRz6sCxHisOM3b1w+OYfhLlwB7ADblC0cdZhZIriPA==
+  version "3.4.2"
+  resolved "https://registry.yarnpkg.com/listr2/-/listr2-3.4.2.tgz#2e3bb11537859388005accc78a92f92c3a8a0eb3"
+  integrity sha512-IVkhrfBGiH889gd65breP/EVvH/V3duYqzBS43tmW+EvqclKK3mt9mHItfDn3qROO29ka7vfYUEavMmMa8c4ag==
   dependencies:
     chalk "^4.1.0"
     cli-truncate "^2.1.0"
