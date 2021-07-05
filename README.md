@@ -56,6 +56,10 @@ you can customize these settings.
 
 ## Usage
 
+```
+$ register_sts_assumed_role
+```
+
 ![architecture](document/register_sts_assumed_role.gif)
 
 ## Support
